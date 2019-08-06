@@ -77,15 +77,46 @@ const xtitle: any = chart
   .style("text-anchor", "middle")
   .text("Age Group");
 
-// add legends
-const legend_auto: any = d3Legend
-  .legendColor()
-  .labels(["Male", "Female"])
-  .scale(color);
-container
+// add legends 1 auto legend
+// const legend_auto: any = d3Legend
+//   .legendColor()
+//   .labels(["Male", "Female"])
+//   .scale(color);
+// container
+//   .append("g")
+//   .attr("class", "legend_auto")
+//   .style("font-size", 12)
+//   .style("font-family", "sans-serif")
+//   .attr("transform", "translate(650, 100)")
+//   .call(legend_auto);
+
+// add legends 2 manual legend
+const legend: any = chart
+  .selectAll(".legend")
+  .data(color.domain())
+  .enter()
   .append("g")
-  .attr("class", "legend_auto")
-  .style("font-size", 12)
-  .style("font-family", "sans-serif")
-  .attr("transform", "translate(650, 100)")
-  .call(legend_auto);
+  .attr("class", "legend")
+  .attr("transform", function(i: number) {
+    return `translate(0, ${i * 20})`;
+  })
+  .style("font-family", "sans-serif");
+legend
+  .append("rect")
+  .attr("class", "legend-rect")
+  .attr("x", width + margin.right - 12)
+  .attr("y", 65)
+  .attr("width", 12)
+  .attr("height", 12)
+  .style("fill", color);
+legend
+  .append("text")
+  .attr("class", "legend-text")
+  .attr("x", width + margin.right - 22)
+  .attr("y", 70)
+  .style("font-size", "12px")
+  .attr("dy", ".35em")
+  .style("text-anchor", "end")
+  .text(function(d: number) {
+    return d === 1 ? "Male" : "Female";
+  });
