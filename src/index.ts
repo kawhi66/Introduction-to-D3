@@ -1,5 +1,5 @@
 import data from "./census.json";
-import { unique } from "./utils";
+import { unique, Row, isYearAndSex } from "./utils";
 import * as d3 from "d3";
 import d3Legend from "d3-svg-legend";
 
@@ -52,9 +52,6 @@ const yaxis: any = chart
   .attr("class", "axis axis--y")
   .call(d3.axisLeft(y));
 
-console.log(ageDomain, peopleDomain, sexDomain);
-console.log(chart);
-
 // Add titles
 container.selectAll("text").style("font-family", "sans-serif");
 const title: any = container
@@ -91,32 +88,97 @@ const xtitle: any = chart
 //   .call(legend_auto);
 
 // add legends 2 manual legend
-const legend: any = chart
-  .selectAll(".legend")
-  .data(color.domain())
+// const legend: any = chart
+//   .selectAll(".legend")
+//   .data(color.domain())
+//   .enter()
+//   .append("g")
+//   .attr("class", "legend")
+//   .attr("transform", function(i: number) {
+//     return `translate(0, ${i * 20})`;
+//   })
+//   .style("font-family", "sans-serif");
+// legend
+//   .append("rect")
+//   .attr("class", "legend-rect")
+//   .attr("x", width + margin.right - 12)
+//   .attr("y", 65)
+//   .attr("width", 12)
+//   .attr("height", 12)
+//   .style("fill", color);
+// legend
+//   .append("text")
+//   .attr("class", "legend-text")
+//   .attr("x", width + margin.right - 22)
+//   .attr("y", 70)
+//   .style("font-size", "12px")
+//   .attr("dy", ".35em")
+//   .style("text-anchor", "end")
+//   .text(function(d: number) {
+//     return d === 1 ? "Male" : "Female";
+//   });
+
+// Creating bars
+const state: { year: number; sex: number } = { year: 1900, sex: 2 };
+const filteredData: Row[] = data.filter(row => isYearAndSex(row, state.year, state.sex));
+const bars: any = chart.selectAll(".bar").data(filteredData);
+const enterbars: any = bars
   .enter()
-  .append("g")
-  .attr("class", "legend")
-  .attr("transform", function(i: number) {
-    return `translate(0, ${i * 20})`;
-  })
-  .style("font-family", "sans-serif");
-legend
   .append("rect")
-  .attr("class", "legend-rect")
-  .attr("x", width + margin.right - 12)
-  .attr("y", 65)
-  .attr("width", 12)
-  .attr("height", 12)
-  .style("fill", color);
-legend
-  .append("text")
-  .attr("class", "legend-text")
-  .attr("x", width + margin.right - 22)
-  .attr("y", 70)
-  .style("font-size", "12px")
-  .attr("dy", ".35em")
-  .style("text-anchor", "end")
-  .text(function(d: number) {
-    return d === 1 ? "Male" : "Female";
-  });
+  .attr("class", "bar")
+  .attr("x", (d: Row) => x(d.age_group))
+  .attr("y", (d: Row) => y(d.people))
+  .attr("width", x.bandwidth())
+  .attr("height", (d: Row) => height - y(d.people))
+  .attr("fill", (d: Row) => color(d.sex));
+
+// Creating a dynamic visualization with Update
+function updateNaive(sex: number, step: number) {
+  state.year += step;
+  state.sex = sex;
+
+  const newData = data.filter(row => isYearAndSex(row, state.year, state.sex));
+  const bars = chart.selectAll(".bar").data(newData);
+  bars
+    .transition("update")
+    .duration(500)
+    .attr("x", (d: Row) => x(d.age_group))
+    .attr("y", (d: Row) => y(d.people))
+    .attr("height", (d: Row) => height - y(d.people))
+    .attr("fill", (d: Row) => color(d.sex));
+
+  const currYearNaive: any = document.getElementById("curr-year-naive");
+  if (currYearNaive !== null) {
+    currYearNaive.textContent = state.year;
+  }
+}
+
+const decrement: any = document.getElementById("decrement");
+if (decrement !== null) {
+  decrement.onclick = () => {
+    if (state.year > 1900) {
+      updateNaive(state.sex, -10);
+    }
+  };
+}
+
+const increment: any = document.getElementById("increment");
+if (increment !== null) {
+  increment.onclick = () => {
+    if (state.year < 2000) {
+      updateNaive(state.sex, 10);
+    }
+  };
+}
+
+const switchSexButton: any = document.getElementById("switch-sex");
+if (switchSexButton !== null) {
+  switchSexButton.onclick = () => {
+    updateNaive(state.sex === 2 ? 1 : 2, 0);
+  };
+}
+
+const currYearNaive: any = document.getElementById("curr-year-naive");
+if (currYearNaive !== null) {
+  currYearNaive.textContent = state.year;
+}
