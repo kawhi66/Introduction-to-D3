@@ -75,17 +75,17 @@ const xtitle: any = chart
   .text("Age Group");
 
 // add legends 1 auto legend
-// const legend_auto: any = d3Legend
-//   .legendColor()
-//   .labels(["Male", "Female"])
-//   .scale(color);
-// container
-//   .append("g")
-//   .attr("class", "legend_auto")
-//   .style("font-size", 12)
-//   .style("font-family", "sans-serif")
-//   .attr("transform", "translate(650, 100)")
-//   .call(legend_auto);
+const legend_auto: any = d3Legend
+  .legendColor()
+  .labels(["Male", "Female"])
+  .scale(color);
+container
+  .append("g")
+  .attr("class", "legend_auto")
+  .style("font-size", 12)
+  .style("font-family", "sans-serif")
+  .attr("transform", "translate(650, 100)")
+  .call(legend_auto);
 
 // add legends 2 manual legend
 // const legend: any = chart
@@ -134,10 +134,10 @@ const enterbars: any = bars
 
 // Creating a dynamic visualization with Update
 function updateNaive(sex: number, step: number) {
-  state.year += step;
   state.sex = sex;
-
+  state.year += step;
   const newData = data.filter(row => isYearAndSex(row, state.year, state.sex));
+
   const bars = chart.selectAll(".bar").data(newData);
   bars
     .transition("update")
@@ -153,11 +153,68 @@ function updateNaive(sex: number, step: number) {
   }
 }
 
+function updateBetter(sex: number, step: number) {
+  // Step 1. Data.
+  state.sex = sex;
+  state.year += step;
+  const newData = data.filter(row => isYearAndSex(row, state.year, state.sex));
+
+  // Step 2. Join.
+  const bars = chart.selectAll(".bar").data(newData, (d: Row) => {
+    if (d.year === state.year) {
+      // the age for the current year should match the age - step for the previous year.
+      return d.age_group - step;
+    } else {
+      return d.age_group;
+    }
+  });
+
+  // Step 3. Enter.
+  bars
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", (d: Row) => x(d.age_group))
+    .attr("y", (d: Row) => y(0))
+    .attr("width", x.bandwidth())
+    .attr("height", 0)
+    .attr("fill", (d: Row) => color(d.sex))
+    .transition("enter-transition")
+    .duration(500)
+    .attr("y", (d: Row) => y(d.people))
+    .attr("height", (d: Row) => height - y(d.people));
+
+  // Step 4. Update.
+  bars
+    .transition("update-transition")
+    .duration(500)
+    .attr("x", (d: Row) => x(d.age_group))
+    .attr("y", (d: Row) => y(d.people))
+    .attr("height", (d: Row) => height - y(d.people))
+    .attr("fill", (d: Row) => color(d.sex));
+
+  // Step 5. Exit.
+  bars
+    .exit()
+    .transition("exit-transition")
+    .duration(500)
+    .attr("height", 0)
+    .attr("y", y(0))
+    .remove();
+
+  // update the year text
+  const currYearNaive: any = document.getElementById("curr-year-naive");
+  if (currYearNaive !== null) {
+    currYearNaive.textContent = state.year;
+  }
+}
+
+const update = updateBetter; // 切换 updateNaive or updateBetter
 const decrement: any = document.getElementById("decrement");
 if (decrement !== null) {
   decrement.onclick = () => {
     if (state.year > 1900) {
-      updateNaive(state.sex, -10);
+      update(state.sex, -10);
     }
   };
 }
@@ -166,7 +223,7 @@ const increment: any = document.getElementById("increment");
 if (increment !== null) {
   increment.onclick = () => {
     if (state.year < 2000) {
-      updateNaive(state.sex, 10);
+      update(state.sex, 10);
     }
   };
 }
@@ -174,7 +231,7 @@ if (increment !== null) {
 const switchSexButton: any = document.getElementById("switch-sex");
 if (switchSexButton !== null) {
   switchSexButton.onclick = () => {
-    updateNaive(state.sex === 2 ? 1 : 2, 0);
+    update(state.sex === 2 ? 1 : 2, 0);
   };
 }
 
