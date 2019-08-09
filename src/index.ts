@@ -2,6 +2,7 @@ import data from "./census.json";
 import { unique, Row, isYearAndSex } from "./utils";
 import * as d3 from "d3";
 import d3Legend from "d3-svg-legend";
+import d3Tip from "d3-tip";
 
 const width: number = 600;
 const height: number = 400;
@@ -75,48 +76,48 @@ const xtitle: any = chart
   .text("Age Group");
 
 // add legends 1 auto legend
-const legend_auto: any = d3Legend
-  .legendColor()
-  .labels(["Male", "Female"])
-  .scale(color);
-container
-  .append("g")
-  .attr("class", "legend_auto")
-  .style("font-size", 12)
-  .style("font-family", "sans-serif")
-  .attr("transform", "translate(650, 100)")
-  .call(legend_auto);
+// const legend_auto: any = d3Legend
+//   .legendColor()
+//   .labels(["Male", "Female"])
+//   .scale(color);
+// container
+//   .append("g")
+//   .attr("class", "legend_auto")
+//   .style("font-size", 12)
+//   .style("font-family", "sans-serif")
+//   .attr("transform", "translate(650, 100)")
+//   .call(legend_auto);
 
 // add legends 2 manual legend
-// const legend: any = chart
-//   .selectAll(".legend")
-//   .data(color.domain())
-//   .enter()
-//   .append("g")
-//   .attr("class", "legend")
-//   .attr("transform", function(i: number) {
-//     return `translate(0, ${i * 20})`;
-//   })
-//   .style("font-family", "sans-serif");
-// legend
-//   .append("rect")
-//   .attr("class", "legend-rect")
-//   .attr("x", width + margin.right - 12)
-//   .attr("y", 65)
-//   .attr("width", 12)
-//   .attr("height", 12)
-//   .style("fill", color);
-// legend
-//   .append("text")
-//   .attr("class", "legend-text")
-//   .attr("x", width + margin.right - 22)
-//   .attr("y", 70)
-//   .style("font-size", "12px")
-//   .attr("dy", ".35em")
-//   .style("text-anchor", "end")
-//   .text(function(d: number) {
-//     return d === 1 ? "Male" : "Female";
-//   });
+const legend: any = chart
+  .selectAll(".legend")
+  .data(color.domain())
+  .enter()
+  .append("g")
+  .attr("class", "legend")
+  .attr("transform", function(i: number) {
+    return `translate(0, ${i * 20})`;
+  })
+  .style("font-family", "sans-serif");
+legend
+  .append("rect")
+  .attr("class", "legend-rect")
+  .attr("x", width + margin.right - 12)
+  .attr("y", 65)
+  .attr("width", 12)
+  .attr("height", 12)
+  .style("fill", color);
+legend
+  .append("text")
+  .attr("class", "legend-text")
+  .attr("x", width + margin.right - 22)
+  .attr("y", 70)
+  .style("font-size", "12px")
+  .attr("dy", ".35em")
+  .style("text-anchor", "end")
+  .text(function(d: number) {
+    return d === 1 ? "Male" : "Female";
+  });
 
 // Creating bars
 const state: { year: number; sex: number } = { year: 1900, sex: 2 };
@@ -131,6 +132,15 @@ const enterbars: any = bars
   .attr("width", x.bandwidth())
   .attr("height", (d: Row) => height - y(d.people))
   .attr("fill", (d: Row) => color(d.sex));
+
+// Displaying the selected sex
+legend.selectAll(".legend-rect").style("opacity", (d: number) => (d === state.sex ? 1 : 0.5));
+legend
+  .selectAll(".legend-text")
+  .style("opacity", (d: number) => (d === state.sex ? 1 : 0.5))
+  .style("font-weight", (d: number) => (d === state.sex ? 700 : 400));
+legend.on("click", (d: number) => update(d, 0));
+legend.style("cursor", "pointer");
 
 // Creating a dynamic visualization with Update
 function updateNaive(sex: number, step: number) {
@@ -179,6 +189,17 @@ function updateBetter(sex: number, step: number) {
     .attr("width", x.bandwidth())
     .attr("height", 0)
     .attr("fill", (d: Row) => color(d.sex))
+    .on("mouseover", function(this: HTMLElement, d: Row) {
+      // show the tooltip on mouse over
+      tip.show(d, this);
+      // when the bar is mouse-overed, we slightly decrease opacity of the bar.
+      d3.select(this).style("opacity", 0.7);
+    })
+    .on("mouseout", function(this: HTMLElement, d: Row) {
+      // hide the tooltip on mouse out
+      tip.hide();
+      d3.select(this).style("opacity", 1);
+    })
     .transition("enter-transition")
     .duration(500)
     .attr("y", (d: Row) => y(d.people))
@@ -201,6 +222,13 @@ function updateBetter(sex: number, step: number) {
     .attr("height", 0)
     .attr("y", y(0))
     .remove();
+
+  // update legend
+  legend.selectAll(".legend-rect").style("opacity", (d: number) => (d === state.sex ? 1 : 0.5));
+  legend
+    .selectAll(".legend-text")
+    .style("opacity", (d: number) => (d === state.sex ? 1 : 0.5))
+    .style("font-weight", (d: number) => (d === state.sex ? 700 : 400));
 
   // update the year text
   const currYearNaive: any = document.getElementById("curr-year-naive");
@@ -239,3 +267,31 @@ const currYearNaive: any = document.getElementById("curr-year-naive");
 if (currYearNaive !== null) {
   currYearNaive.textContent = state.year;
 }
+
+// Creating tooltips
+const tip: any = d3Tip()
+  .attr("class", "d3-tip")
+  .style("color", "white")
+  .style("background-color", "black")
+  .style("padding", "6px")
+  .style("border-radius", "4px")
+  .style("font-size", "12px")
+  .offset([-10, 0])
+  .html(function(d: Row) {
+    return `<strong>${d3.format(",")(d.people)}</strong> people`;
+  });
+container.call(tip);
+
+chart
+  .selectAll(".bar")
+  .on("mouseover", function(this: HTMLElement, d: Row) {
+    // show the tooltip on mouse over
+    tip.show(d, this);
+    // when the bar is mouse-overed, we slightly decrease opacity of the bar.
+    d3.select(this).style("opacity", 0.7);
+  })
+  .on("mouseout", function(this: HTMLElement, d: Row) {
+    // hide the tooltip on mouse out
+    tip.hide();
+    d3.select(this).style("opacity", 1);
+  });
